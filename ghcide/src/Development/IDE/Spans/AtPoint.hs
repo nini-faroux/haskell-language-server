@@ -271,30 +271,29 @@ atPoint IdeOptions{} (HAR _ (hf :: HieASTs a) _rf _ kind) (DKMap dm km) pos = li
         renderEvidenceTree (T.Node (EvidenceInfo{evidenceDetails=Just (EvLetBind _,_,_)}) [x])
           = renderEvidenceTree x
         renderEvidenceTree (T.Node (EvidenceInfo{evidenceDetails=Just (EvLetBind _,_,_), ..}) xs)
-          = hang (text "- Evidence of constraint `" O.<> expandType evidenceType O.<> "`") 2 $
-                 vcat $ text "depending on:" : map renderEvidenceTree' xs
-        renderEvidenceTree x = renderEvidenceTree' x
+          = hang (text "Evidence of constraint `" O.<> expandType evidenceType O.<> "`") 2 $
+                 vcat $ text "constructed using:" : map renderEvidenceTree' xs
+        renderEvidenceTree (T.Node (EvidenceInfo{..}) _)
+          = hang (text "Evidence of constraint `" O.<> expandType evidenceType O.<> "`") 2 $
+                 vcat $ printDets evidenceSpan evidenceDetails : map (text . T.unpack) (definedAt evidenceVar)
 
         -- renderEvidenceTree' skips let bound evidence variables and prints the children directly
         renderEvidenceTree' (T.Node (EvidenceInfo{evidenceDetails=Just (EvLetBind _,_,_)}) xs)
           = vcat (map renderEvidenceTree' xs)
-        renderEvidenceTree' (T.Node (EvidenceInfo{..}) xs)
-          = hang (text "- Evidence of constraint `" O.<> expandType evidenceType O.<> "`") 2 $
-                 vcat $ map (text . T.unpack) (definedAt evidenceVar)
-                     ++ [printDets evidenceSpan evidenceDetails (null xs)]
-                     ++ map renderEvidenceTree' xs
+        renderEvidenceTree' (T.Node (EvidenceInfo{..}) _)
+          = hang (text "- `" O.<> expandType evidenceType O.<> "`") 2 $
+                 vcat $ printDets evidenceSpan evidenceDetails : map (text . T.unpack) (definedAt evidenceVar)
 
-        printDets :: RealSrcSpan -> Maybe (EvVarSource, Scope, Maybe Span) -> Bool -> SDoc
-        printDets _    Nothing True = text ""
-        printDets _    Nothing False = text "constructed using:"
-        printDets ospn (Just (src,_,mspn)) _ = pprSrc
+        printDets :: RealSrcSpan -> Maybe (EvVarSource, Scope, Maybe Span) -> SDoc
+        printDets _    Nothing = text "using an external instance"
+        printDets ospn (Just (src,_,mspn)) = pprSrc
                                       $$ text "at" <+> ppr spn
           where
             -- Use the bind span if we have one, else use the occurence span
             spn = fromMaybe ospn mspn
             pprSrc = case src of
               -- Users don't know what HsWrappers are
-              EvWrapperBind -> "bound by type signature or pattern"
+              EvWrapperBind -> "bound by a context"
               _ -> ppr src
 #endif
 
