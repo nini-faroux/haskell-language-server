@@ -51,6 +51,7 @@ instance Hashable GhcPlugins.InstalledUnitId where
   hashWithSalt salt = hashWithSalt salt . installedUnitIdString
 #else
 instance Show InstalledUnitId where show = prettyPrint
+deriving instance Ord SrcSpan
 #endif
 
 instance NFData SB.StringBuffer where rnf = rwhnf
